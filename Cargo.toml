@@ -18,5 +18,4 @@ maintenance = { status = "actively-developed" }
 [dependencies]
 pest = "2.1"
 pest_derive = "2.1"
-chrono = "0.4"
 chess = { version = "3.2", optional = true }

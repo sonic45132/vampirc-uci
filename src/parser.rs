@@ -8,7 +8,7 @@
 use std::fmt::Error as FmtError;
 use std::str::FromStr;
 
-use chrono::Duration;
+use std::time::Duration;
 use pest::error::Error;
 use pest::iterators::Pair;
 use pest::Parser;
@@ -249,10 +249,10 @@ fn do_parse_uci(
                 Rule::go => {
                     let mut time_control: Option<UciTimeControl> = None;
                     let mut tl = false;
-                    let mut wtime: Option<i64> = None;
-                    let mut btime: Option<i64> = None;
-                    let mut winc: Option<i64> = None;
-                    let mut binc: Option<i64> = None;
+                    let mut wtime: Option<u64> = None;
+                    let mut btime: Option<u64> = None;
+                    let mut winc: Option<u64> = None;
+                    let mut binc: Option<u64> = None;
                     let mut moves_to_go: Option<u8> = None;
 
                     let mut search: UciSearchControl = UciSearchControl::default();
@@ -274,7 +274,7 @@ fn do_parse_uci(
                                                     }
                                                     Rule::go_movetime => {
                                                         time_control = Some(UciTimeControl::MoveTime(
-                                                            Duration::milliseconds(parse_milliseconds(spi)),
+                                                            Duration::from_millis(parse_milliseconds(spi)),
                                                         ));
                                                     }
                                                     Rule::go_timeleft => {
@@ -340,10 +340,10 @@ fn do_parse_uci(
 
                     if tl {
                         time_control = Some(UciTimeControl::TimeLeft {
-                            white_time: wtime.map(|millis| Duration::milliseconds(millis)),
-                            black_time: btime.map(|millis| Duration::milliseconds(millis)),
-                            white_increment: winc.map(|millis| Duration::milliseconds(millis)),
-                            black_increment: binc.map(|millis| Duration::milliseconds(millis)),
+                            white_time: wtime.map(|millis| Duration::from_millis(millis)),
+                            black_time: btime.map(|millis| Duration::from_millis(millis)),
+                            white_increment: winc.map(|millis| Duration::from_millis(millis)),
+                            black_increment: binc.map(|millis| Duration::from_millis(millis)),
                             moves_to_go,
                         });
                     }
@@ -556,7 +556,7 @@ fn do_parse_uci(
                                             break;
                                         }
                                         Rule::info_time => {
-                                            let info_time = UciInfoAttribute::Time(Duration::milliseconds(parse_i64(
+                                            let info_time = UciInfoAttribute::Time(Duration::from_millis(parse_u64(
                                                 spi,
                                                 Rule::digits12,
                                             )));
@@ -871,11 +871,11 @@ fn parse_square(sq_pair: Pair<Rule>) -> Square {
     Square::from_str(format!("{}{}", file.to_string(), rank.to_string()).as_str()).unwrap()
 }
 
-fn parse_milliseconds(pair: Pair<Rule>) -> i64 {
+fn parse_milliseconds(pair: Pair<Rule>) -> u64 {
     for sp in pair.into_inner() {
         match sp.as_rule() {
             Rule::milliseconds => {
-                return str::parse::<i64>(sp.as_span().as_str()).unwrap();
+                return str::parse::<u64>(sp.as_span().as_str()).unwrap();
             }
             _ => {}
         }
@@ -1341,7 +1341,7 @@ mod tests {
 
         assert_eq!(
             ml[0],
-            UciMessage::go_movetime(Duration::milliseconds(55055))
+            UciMessage::go_movetime(Duration::from_millis(55055))
         );
     }
 
@@ -1352,10 +1352,10 @@ mod tests {
         assert_eq!(ml.len(), 1);
 
         let tl = UciTimeControl::TimeLeft {
-            white_time: Some(Duration::milliseconds(903000)),
-            black_time: Some(Duration::milliseconds(770908)),
-            white_increment: Some(Duration::milliseconds(15000)),
-            black_increment: Some(Duration::milliseconds(10000)),
+            white_time: Some(Duration::from_millis(903000)),
+            black_time: Some(Duration::from_millis(770908)),
+            white_increment: Some(Duration::from_millis(15000)),
+            black_increment: Some(Duration::from_millis(10000)),
             moves_to_go: Some(17),
         };
 
@@ -1441,7 +1441,7 @@ mod tests {
             parse_strict("go movetime 10000 searchmoves a1h8 depth 6 nodes 55000000\n").unwrap();
         assert_eq!(ml.len(), 1);
 
-        let tc = UciTimeControl::MoveTime(Duration::milliseconds(10000));
+        let tc = UciTimeControl::MoveTime(Duration::from_millis(10000));
 
         #[cfg(not(feature = "chess"))]
         let sc = UciSearchControl {
@@ -1829,7 +1829,7 @@ mod tests {
     fn test_parse_info_time() {
         let ml = parse_strict("info    time    9002\n").unwrap();
 
-        let m = UciMessage::Info(vec![UciInfoAttribute::Time(Duration::milliseconds(9002))]);
+        let m = UciMessage::Info(vec![UciInfoAttribute::Time(Duration::from_millis(9002))]);
 
         assert_eq!(m, ml[0]);
     }
@@ -2153,7 +2153,7 @@ mod tests {
             UciInfoAttribute::from_centipawns(13),
             UciInfoAttribute::Depth(1),
             UciInfoAttribute::Nodes(13),
-            UciInfoAttribute::Time(Duration::milliseconds(15)),
+            UciInfoAttribute::Time(Duration::from_millis(15)),
             UciInfoAttribute::Pv(vec![UciMove::from_to(
                 UciSquare::from('f', 1),
                 UciSquare::from('b', 5),
@@ -2165,7 +2165,7 @@ mod tests {
             UciInfoAttribute::from_centipawns(13),
             UciInfoAttribute::Depth(1),
             UciInfoAttribute::Nodes(13),
-            UciInfoAttribute::Time(Duration::milliseconds(15)),
+            UciInfoAttribute::Time(Duration::from_millis(15)),
             UciInfoAttribute::Pv(vec![ChessMove::new(Square::F1, Square::B5, None)]),
         ]);
 
@@ -2206,7 +2206,7 @@ mod tests {
             UciInfoAttribute::from_centipawns(20),
             UciInfoAttribute::Depth(3),
             UciInfoAttribute::Nodes(423),
-            UciInfoAttribute::Time(Duration::milliseconds(15)),
+            UciInfoAttribute::Time(Duration::from_millis(15)),
             UciInfoAttribute::Pv(vec![
                 UciMove::from_to(UciSquare::from('f', 1), UciSquare::from('c', 4)),
                 UciMove::from_to(UciSquare::from('g', 8), UciSquare::from('f', 6)),
@@ -2219,7 +2219,7 @@ mod tests {
             UciInfoAttribute::from_centipawns(20),
             UciInfoAttribute::Depth(3),
             UciInfoAttribute::Nodes(423),
-            UciInfoAttribute::Time(Duration::milliseconds(15)),
+            UciInfoAttribute::Time(Duration::from_millis(15)),
             UciInfoAttribute::Pv(vec![
                 ChessMove::new(Square::F1, Square::C4, None),
                 ChessMove::new(Square::G8, Square::F6, None),
@@ -2472,8 +2472,8 @@ mod tests {
         let parsed_msg = parse_one("go wtime -4061 btime 56826 movestogo 90\n");
 
         let time_control = UciTimeControl::TimeLeft {
-            white_time: Some(Duration::milliseconds(-4061)),
-            black_time: Some(Duration::milliseconds(56826)),
+            white_time: Some(Duration::from_millis(-4061)),
+            black_time: Some(Duration::from_millis(56826)),
             white_increment: None,
             black_increment: None,
             moves_to_go: Some(90),
@@ -2492,8 +2492,8 @@ mod tests {
         let parsed_msg = parse_one("go wtime +15030 btime +56826 movestogo 90\n");
 
         let time_control = UciTimeControl::TimeLeft {
-            white_time: Some(Duration::milliseconds(15030)),
-            black_time: Some(Duration::milliseconds(56826)),
+            white_time: Some(Duration::from_millis(15030)),
+            black_time: Some(Duration::from_millis(56826)),
             white_increment: None,
             black_increment: None,
             moves_to_go: Some(90),
